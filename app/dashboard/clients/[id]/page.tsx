@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ClientFormDialog } from "@/components/clients/client-form-dialog"
 import { ContactFormDialog } from "@/components/clients/contact-form-dialog"
+import { DealFormDialog } from "@/components/deals/deal-form-dialog"
 import { ActivityComposer } from "@/components/activities/activity-composer"
 import { ActivityTimeline } from "@/components/activities/activity-timeline"
 import { formatRON } from "@/lib/money"
@@ -123,6 +124,9 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
         </TabsContent>
 
         <TabsContent value="deals" className="space-y-3">
+          <div className="flex justify-end">
+            <DealFormDialog clients={[{ id: client.id, name: client.name }]} defaultClientId={client.id} />
+          </div>
           {deals.map((d) => (
             <Link key={d.id} href={`/dashboard/deals/${d.id}`}>
               <Card className="transition-colors hover:border-primary">

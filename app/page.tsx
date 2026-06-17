@@ -46,12 +46,10 @@ export default function HomePage() {
           <span className="text-lg font-semibold tracking-tight">Nimbus CRM</span>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost">
-            <Link href="/login">Autentificare</Link>
+          <Button variant="ghost" render={<Link href="/login" />}>
+            Autentificare
           </Button>
-          <Button asChild>
-            <Link href="/signup">Începe gratuit</Link>
-          </Button>
+          <Button render={<Link href="/signup" />}>Începe gratuit</Button>
         </div>
       </header>
 
@@ -68,11 +66,11 @@ export default function HomePage() {
           o fundație de securitate solidă, peste care AI-ul doar citește și sintetizează.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          <Button asChild size="lg">
-            <Link href="/signup">Creați-vă organizația</Link>
+          <Button size="lg" render={<Link href="/signup" />}>
+            Creați-vă organizația
           </Button>
-          <Button asChild size="lg" variant="outline" className="bg-transparent">
-            <Link href="/login">Am deja cont</Link>
+          <Button size="lg" variant="outline" className="bg-transparent" render={<Link href="/login" />}>
+            Am deja cont
           </Button>
         </div>
       </section>

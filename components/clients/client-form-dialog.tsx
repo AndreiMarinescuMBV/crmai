@@ -49,14 +49,16 @@ export function ClientFormDialog({ client, trigger }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button>
-            <Plus className="mr-2 size-4" />
-            Client nou
-          </Button>
-        )}
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          (trigger as React.ReactElement) ?? (
+            <Button>
+              <Plus className="mr-2 size-4" />
+              Client nou
+            </Button>
+          )
+        }
+      />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editing ? "Editează client" : "Client nou"}</DialogTitle>

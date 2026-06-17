@@ -56,14 +56,16 @@ export function DealFormDialog({ clients, deal, defaultClientId, trigger }: Prop
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger ?? (
-          <Button>
-            <Plus className="mr-2 size-4" />
-            Oportunitate
-          </Button>
-        )}
-      </DialogTrigger>
+      <DialogTrigger
+        render={
+          (trigger as React.ReactElement) ?? (
+            <Button>
+              <Plus className="mr-2 size-4" />
+              Oportunitate
+            </Button>
+          )
+        }
+      />
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{editing ? "Editează oportunitate" : "Oportunitate nouă"}</DialogTitle>
@@ -75,7 +77,7 @@ export function DealFormDialog({ clients, deal, defaultClientId, trigger }: Prop
           </div>
           <div className="space-y-2">
             <Label>Client *</Label>
-            <Select value={clientId} onValueChange={setClientId} disabled={Boolean(defaultClientId)}>
+            <Select value={clientId} onValueChange={(v) => setClientId(v ?? "")} disabled={Boolean(defaultClientId)}>
               <SelectTrigger>
                 <SelectValue placeholder="Selectați un client" />
               </SelectTrigger>

@@ -41,11 +41,13 @@ export default async function DashboardLayout({ children }: { children: ReactNod
         <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-border bg-card/80 px-4 backdrop-blur lg:px-8">
           <div className="flex items-center gap-2">
             <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Deschide meniul">
-                  <Menu className="size-5" />
-                </Button>
-              </SheetTrigger>
+              <SheetTrigger
+                render={
+                  <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Deschide meniul">
+                    <Menu className="size-5" />
+                  </Button>
+                }
+              />
               <SheetContent side="left" className="w-64 p-0">
                 <SheetTitle className="sr-only">Navigație</SheetTitle>
                 {brand}

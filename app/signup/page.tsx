@@ -50,8 +50,8 @@ export default function SignupPage() {
             Am trimis un link de confirmare la <span className="font-medium text-foreground">{email}</span>. Confirmați
             emailul, apoi veți finaliza configurarea organizației.
           </p>
-          <Button asChild variant="outline" className="w-full bg-transparent">
-            <Link href="/login">Înapoi la autentificare</Link>
+          <Button variant="outline" className="w-full bg-transparent" render={<Link href="/login" />}>
+            Înapoi la autentificare
           </Button>
         </div>
       </AuthShell>

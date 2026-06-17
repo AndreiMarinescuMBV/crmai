@@ -40,12 +40,12 @@ export default function OnboardingPage() {
       toast.error(result.error)
       return
     }
-    // Refresh the session so the new profile/claims are picked up.
+    // Refresh the session so the new profile/claims are picked up, then do a
+    // full navigation so the server reads the updated auth cookies.
     const supabase = createClient()
     await supabase.auth.refreshSession()
     toast.success("Organizația a fost creată.")
-    router.push("/dashboard")
-    router.refresh()
+    window.location.assign("/dashboard")
   }
 
   return (

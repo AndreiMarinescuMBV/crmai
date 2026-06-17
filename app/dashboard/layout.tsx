@@ -11,8 +11,9 @@ import {
   SheetTrigger,
   SheetTitle,
 } from "@/components/ui/sheet"
-import { Button } from "@/components/ui/button"
+import { buttonVariants } from "@/components/ui/button"
 import { Menu } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 export default async function DashboardLayout({ children }: { children: ReactNode }) {
   const ctx = await getTenantContext()
@@ -42,12 +43,11 @@ export default async function DashboardLayout({ children }: { children: ReactNod
           <div className="flex items-center gap-2">
             <Sheet>
               <SheetTrigger
-                render={
-                  <Button variant="ghost" size="icon" className="lg:hidden" aria-label="Deschide meniul">
-                    <Menu className="size-5" />
-                  </Button>
-                }
-              />
+                aria-label="Deschide meniul"
+                className={cn(buttonVariants({ variant: "ghost", size: "icon" }), "lg:hidden")}
+              >
+                <Menu className="size-5" />
+              </SheetTrigger>
               <SheetContent side="left" className="w-64 p-0">
                 <SheetTitle className="sr-only">Navigație</SheetTitle>
                 {brand}

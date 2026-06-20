@@ -3,11 +3,17 @@ import { createClient } from "@/lib/supabase/server"
 import { getTenantContext } from "@/lib/guards"
 import { DocumentUploadForm } from "@/components/dashboard/document-upload-form"
 import { DocumentRowActions } from "@/components/dashboard/document-row-actions"
+import { DocumentActions } from "@/components/dashboard/document-actions"
 
 export default async function DocumentsPage() {
   const result = await listDocumentsAction()
   const ctx = await getTenantContext()
   const supabase = await createClient()
+
+const { data: deals } = await supabase
+  .from("deals")
+  .select("id, title")
+  .order("title")
 
   const { data: clients } = await supabase
     .from("clients")
@@ -26,7 +32,7 @@ export default async function DocumentsPage() {
         <h1 className="text-2xl font-semibold">Documente</h1>
       </div>
 
-      <DocumentUploadForm clients={clients ?? []} />
+      <DocumentUploadForm clients={clients ?? []} deals={deals ?? []} />
 
       {documents.length === 0 ? (
         <p className="text-muted-foreground">Nu există documente încă.</p>
@@ -54,7 +60,10 @@ export default async function DocumentsPage() {
                     {new Date(doc.created_at).toLocaleDateString("ro-RO")}
                   </td>
                   <td className="p-3">
-                    <DocumentRowActions documentId={doc.id} />
+                    <div className="flex items-center gap-3">
+                      <DocumentActions documentId={doc.id} />
+                      <DocumentRowActions documentId={doc.id} />
+                    </div>
                   </td>
                 </tr>
               ))}

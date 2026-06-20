@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server"
 import { getTenantContext } from "@/lib/guards"
 import { type ActionResult, ok, fail } from "@/lib/action-result"
 import { documentSchema } from "@/lib/validation/document-schema"
+import { fileTypeFromBuffer } from "file-type"
+import { randomUUID } from "crypto"
 
 export async function listDocumentsAction(): Promise<ActionResult<{ id: string; file_name: string; mime_type: string; file_size: number; created_at: string; client_id: string | null; deal_id: string | null }[]>> {
   const supabase = await createClient()
@@ -56,6 +58,14 @@ export async function deleteDocumentAction(id: string): Promise<ActionResult> {
   revalidatePath("/dashboard/documents")
   return ok(undefined)
 }
+
+// Aliniat cu §6 din plan: ingest suportă doar PDF (unpdf) și DOCX (mammoth), fără OCR.
+// Orice alt tip e refuzat la upload — nu are sens să accepți fișiere pe care AI-ul nu le poate citi.
+const ALLOWED_MIME_TO_EXT: Record<string, string> = {
+  "application/pdf": "pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+}
+
 export async function uploadDocumentAction(formData: FormData): Promise<ActionResult<{ id: string }>> {
   const file = formData.get("file") as File | null
   const clientId = formData.get("client_id") as string | null
@@ -63,27 +73,47 @@ export async function uploadDocumentAction(formData: FormData): Promise<ActionRe
 
   if (!file || file.size === 0) return fail("Niciun fișier selectat")
 
+  // Limită 25MiB conform planului (§14)
+  const MAX_SIZE = 25 * 1024 * 1024
+  if (file.size > MAX_SIZE) return fail("Fișierul depășește limita de 25MB")
+
+  const contextId = clientId || dealId
+  if (!contextId) return fail("Trebuie selectat un client sau un deal")
+
   const ctx = await getTenantContext()
   const supabase = await createClient()
 
-  // Construim path-ul respectând convenția RLS: <tenant_id>/<filename>
-  const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_")
-  const storagePath = `${ctx.tenantId}/${Date.now()}-${safeFileName}`
+  // Citim conținutul O SINGURĂ DATĂ — îl folosim atât pentru verificarea
+  // magic-bytes, cât și pentru upload (Buffer e acceptat direct de Supabase Storage)
+  const arrayBuffer = await file.arrayBuffer()
+  const buffer = Buffer.from(arrayBuffer)
 
-  // 1. Upload în storage
+  // Validare prin magic-bytes — NU ne bazăm pe file.type (vine din browser, e falsificabil)
+  const detected = await fileTypeFromBuffer(buffer)
+  if (!detected || !(detected.mime in ALLOWED_MIME_TO_EXT)) {
+    return fail("Tip de fișier nepermis. Sunt acceptate doar PDF și DOCX.")
+  }
+
+  // document_id generat AICI, înainte de insert — devine atât id-ul rândului,
+  // cât și numele fizic al fișierului în storage (anti path-traversal/coliziune, conform planului §7)
+  const documentId = randomUUID()
+  const ext = ALLOWED_MIME_TO_EXT[detected.mime]
+  const storagePath = `${ctx.tenantId}/${contextId}/${documentId}.${ext}`
+
+  // 1. Upload în storage, la path-ul determinat de noi (nu de input-ul userului)
   const { error: uploadError } = await supabase.storage
     .from("crm-documents")
-    .upload(storagePath, file, {
-      contentType: file.type,
+    .upload(storagePath, buffer, {
+      contentType: detected.mime,
       upsert: false,
     })
 
   if (uploadError) return fail(`Eroare upload: ${uploadError.message}`)
 
-  // 2. Validăm + inserăm rândul în tabel
+  // 2. Validăm + inserăm rândul, cu id-ul deja generat
   const parsed = documentSchema.safeParse({
-    file_name: file.name,
-    mime_type: file.type || "application/octet-stream",
+    file_name: file.name, // numele original, păstrat doar ca metadată, nu folosit în path
+    mime_type: detected.mime,
     file_size: file.size,
     storage_path: storagePath,
     client_id: clientId || undefined,
@@ -91,7 +121,6 @@ export async function uploadDocumentAction(formData: FormData): Promise<ActionRe
   })
 
   if (!parsed.success) {
-    // Curățăm fișierul orfan din storage dacă validarea eșuează
     await supabase.storage.from("crm-documents").remove([storagePath])
     return fail(parsed.error.issues[0]?.message ?? "Date invalide")
   }
@@ -99,6 +128,7 @@ export async function uploadDocumentAction(formData: FormData): Promise<ActionRe
   const { data, error } = await supabase
     .from("documents")
     .insert({
+      id: documentId, // suprascrie default-ul gen_random_uuid() — același UUID ca în storage path
       tenant_id: ctx.tenantId,
       uploaded_by: ctx.userId,
       file_name: parsed.data.file_name,
@@ -118,4 +148,41 @@ export async function uploadDocumentAction(formData: FormData): Promise<ActionRe
 
   revalidatePath("/dashboard/documents")
   return ok({ id: data.id })
+}
+
+export async function getDocumentUrlAction(
+  documentId: string,
+  mode: "preview" | "download"
+): Promise<ActionResult<{ url: string; fileName: string }>> {
+  const ctx = await getTenantContext()
+  const supabase = await createClient()
+
+  const { data: doc, error: docError } = await supabase
+    .from("documents")
+    .select("id, storage_path, file_name, tenant_id, deleted_at")
+    .eq("id", documentId)
+    .is("deleted_at", null)
+    .single()
+
+  if (docError || !doc) {
+    return fail("Documentul nu a fost găsit")
+  }
+
+  if (doc.tenant_id !== ctx.tenantId) {
+    return fail("Nu ai acces la acest document")
+  }
+
+  const { data: signed, error: signedError } = await supabase.storage
+    .from("crm-documents")
+    .createSignedUrl(
+      doc.storage_path,
+      60,
+      mode === "download" ? { download: doc.file_name } : undefined
+    )
+
+  if (signedError || !signed) {
+    return fail("Nu s-a putut genera link-ul")
+  }
+
+  return ok({ url: signed.signedUrl, fileName: doc.file_name })
 }

@@ -1,7 +1,18 @@
 import { listDocumentsAction } from "@/server/actions/documents"
+import { createClient } from "@/lib/supabase/server"
+import { getTenantContext } from "@/lib/guards"
+import { DocumentUploadForm } from "@/components/dashboard/document-upload-form"
+import { DocumentRowActions } from "@/components/dashboard/document-row-actions"
 
 export default async function DocumentsPage() {
   const result = await listDocumentsAction()
+  const ctx = await getTenantContext()
+  const supabase = await createClient()
+
+  const { data: clients } = await supabase
+    .from("clients")
+    .select("id, name")
+    .order("name")
 
   if (!result.ok) {
     return <p className="text-red-500">Eroare: {result.error}</p>
@@ -15,6 +26,8 @@ export default async function DocumentsPage() {
         <h1 className="text-2xl font-semibold">Documente</h1>
       </div>
 
+      <DocumentUploadForm clients={clients ?? []} />
+
       {documents.length === 0 ? (
         <p className="text-muted-foreground">Nu există documente încă.</p>
       ) : (
@@ -26,6 +39,7 @@ export default async function DocumentsPage() {
                 <th className="p-3 text-left font-medium">Tip</th>
                 <th className="p-3 text-left font-medium">Mărime</th>
                 <th className="p-3 text-left font-medium">Data</th>
+                <th className="p-3 text-left font-medium">Acțiuni</th>
               </tr>
             </thead>
             <tbody>
@@ -38,6 +52,9 @@ export default async function DocumentsPage() {
                   </td>
                   <td className="p-3 text-muted-foreground">
                     {new Date(doc.created_at).toLocaleDateString("ro-RO")}
+                  </td>
+                  <td className="p-3">
+                    <DocumentRowActions documentId={doc.id} />
                   </td>
                 </tr>
               ))}

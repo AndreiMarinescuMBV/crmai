@@ -12,6 +12,7 @@ import {
   UsersRound,
   Mail,
   ShieldCheck,
+  FileText,
 } from "lucide-react"
 import type { AppRole } from "@/lib/types"
 
@@ -22,6 +23,7 @@ const NAV: NavItem[] = [
   { href: "/dashboard/pipeline", label: "Pipeline", icon: KanbanSquare },
   { href: "/dashboard/deals", label: "Oportunități", icon: Target },
   { href: "/dashboard/clients", label: "Clienți", icon: Building2 },
+   { href: "/dashboard/documents", label: "Documente", icon: FileText },
 ]
 
 const ADMIN_NAV: NavItem[] = [

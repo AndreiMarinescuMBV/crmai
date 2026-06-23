@@ -54,11 +54,21 @@ export const dealSchema = z.object({
 })
 export type DealInput = z.infer<typeof dealSchema>
 
+/**
+ * Stage change schema with `from_stage` for optimistic concurrency safety.
+ * The server verifies that the deal is still in `from_stage` before applying
+ * the transition. The DB trigger provides the ultimate enforcement.
+ */
 export const changeStageSchema = z
   .object({
     deal_id: z.string().uuid(),
+    from_stage: z.enum(dealStages),
     to_stage: z.enum(dealStages),
     lost_reason: z.string().max(500).optional().or(z.literal("")),
+  })
+  .refine((d) => canTransition(d.from_stage, d.to_stage), {
+    message: "Tranziție de stagiu invalidă",
+    path: ["to_stage"],
   })
   .refine((d) => d.to_stage !== "lost" || (d.lost_reason && d.lost_reason.trim().length > 0), {
     message: "Motivul pierderii este obligatoriu",
@@ -66,14 +76,24 @@ export const changeStageSchema = z
   })
 export type ChangeStageInput = z.infer<typeof changeStageSchema>
 
-export const activitySchema = z.object({
-  type: z.enum(["call", "meeting", "note"]),
-  subject: z.string().min(1, "Subiectul este obligatoriu").max(200),
-  body: z.string().max(2000).optional().or(z.literal("")),
-  deal_id: z.string().uuid().optional().or(z.literal("")),
-  client_id: z.string().uuid().optional().or(z.literal("")),
-  occurred_at: z.string().optional().or(z.literal("")),
-})
+/**
+ * Activity schema with built-in refinement: at least one of deal_id or
+ * client_id must be provided. Previously checked in the action; now shared
+ * for client/server validation.
+ */
+export const activitySchema = z
+  .object({
+    type: z.enum(["call", "meeting", "note"]),
+    subject: z.string().min(1, "Subiectul este obligatoriu").max(200),
+    body: z.string().max(2000).optional().or(z.literal("")),
+    deal_id: z.string().uuid().optional().or(z.literal("")),
+    client_id: z.string().uuid().optional().or(z.literal("")),
+    occurred_at: z.string().optional().or(z.literal("")),
+  })
+  .refine((d) => !!(d.deal_id || d.client_id), {
+    message: "Activitatea trebuie legată de un client sau o oportunitate",
+    path: ["deal_id"],
+  })
 export type ActivityInput = z.infer<typeof activitySchema>
 
 export const inviteSchema = z.object({

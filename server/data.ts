@@ -67,6 +67,53 @@ export async function getActivities(filter: { dealId?: string; clientId?: string
   return (data as Activity[]) ?? []
 }
 
+/**
+ * Activities enriched with the owner's profile name.
+ * Useful for timeline displays showing "who did what".
+ */
+export async function getActivitiesWithOwner(filter: { dealId?: string; clientId?: string }): Promise<
+  (Activity & { owner: { full_name: string | null; email: string } | null })[]
+> {
+  const supabase = await createClient()
+  let q = supabase
+    .from("activities")
+    .select("*, owner:profiles!activities_owner_id_fkey(full_name, email)")
+    .order("occurred_at", { ascending: false })
+  if (filter.dealId) q = q.eq("deal_id", filter.dealId)
+  if (filter.clientId) q = q.eq("client_id", filter.clientId)
+  const { data } = await q
+  return (data as never) ?? []
+}
+
+/**
+ * Full stage transition history for a deal, ordered chronologically.
+ * Used for deal detail pages and reporting.
+ */
+export async function getDealStageHistory(dealId: string) {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("deal_stage_history")
+    .select("*, changed_by_profile:profiles!deal_stage_history_changed_by_fkey(full_name, email)")
+    .eq("deal_id", dealId)
+    .order("changed_at", { ascending: true })
+  return data ?? []
+}
+
+/**
+ * Clients enriched with aggregated stats (deal count, contact count).
+ * Useful for list views that show summary metrics without N+1 queries.
+ */
+export async function getClientsWithStats(): Promise<
+  (Client & { deals: { count: number }[]; contacts: { count: number }[] })[]
+> {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from("clients")
+    .select("*, deals(count), contacts(count)")
+    .order("created_at", { ascending: false })
+  return (data as never) ?? []
+}
+
 export async function getProfiles(): Promise<Profile[]> {
   const supabase = await createClient()
   const { data } = await supabase.from("profiles").select("*").order("created_at", { ascending: true })

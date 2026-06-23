@@ -9,9 +9,6 @@ import { activitySchema } from "@/lib/validation/schemas"
 export async function createActivityAction(input: unknown): Promise<ActionResult> {
   const parsed = activitySchema.safeParse(input)
   if (!parsed.success) return fail(parsed.error.issues[0]?.message ?? "Date invalide")
-  if (!parsed.data.deal_id && !parsed.data.client_id) {
-    return fail("Activitatea trebuie legată de un client sau o oportunitate")
-  }
 
   const ctx = await getTenantContext()
   const supabase = await createClient()
@@ -27,6 +24,7 @@ export async function createActivityAction(input: unknown): Promise<ActionResult
   }
 
   const { error } = await supabase.from("activities").insert({
+    tenant_id: ctx.tenantId,
     owner_id: ctx.userId,
     team_id: teamId,
     type: parsed.data.type,
@@ -48,6 +46,7 @@ export async function deleteActivityAction(
   id: string,
   ctx: { dealId?: string; clientId?: string },
 ): Promise<ActionResult> {
+  await getTenantContext()
   const supabase = await createClient()
   const { error } = await supabase.from("activities").delete().eq("id", id)
   if (error) return fail(error.message)

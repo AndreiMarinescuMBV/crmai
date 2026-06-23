@@ -13,6 +13,7 @@ import { ActivityTimeline } from "@/components/activities/activity-timeline"
 import { formatRON } from "@/lib/money"
 import { STAGE_LABEL } from "@/lib/types"
 import { ArrowLeft, Mail, Phone, Star, Pencil } from "lucide-react"
+import { AiDocumentChat } from "@/components/dashboard/ai-document-chat"
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
